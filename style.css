@@ -1,0 +1,13 @@
+.buttonContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.listContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-style: solid;
+  border-width: 1px;
+}
