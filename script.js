@@ -1,4 +1,4 @@
-// 0. 초기 indexedDB 설정
+// 초기 indexedDB 설정
 const dbName = "testDB";
 const objectStoreName = "user";
 const dbRequest = indexedDB.open("dbName", 1);
@@ -26,7 +26,7 @@ dbRequest.onupgradeneeded = (event) => {
   objectStore.createIndex("email", "email");
 };
 
-// 1. 생성 이벤트
+// 생성 이벤트
 const createEvent = () => {
   if (!db) {
     console.log("DB does not exist");
@@ -61,7 +61,7 @@ const createEvent = () => {
   };
 };
 
-// 2. 읽기 이벤트
+// 읽기 이벤트
 const readEvent = () => {
   if (!db) {
     console.log("DB does not exist");
@@ -90,9 +90,38 @@ const readEvent = () => {
   };
 };
 
-// 3. 수정 이벤트
-// 4. 삭제 이벤트
-// 5. 초기화 이벤트 (이벤트 연결)
+// 전체 읽기 이벤트
+const readAllEvent = () => {
+  if (!db) {
+    console.log("DB does not exist");
+    return;
+  }
+
+  const itemList = document.querySelector(".itemList");
+
+  const store = db
+    .transaction(objectStoreName, "readonly")
+    .objectStore(objectStoreName);
+
+  const getRequest = store.getAll();
+
+  getRequest.onsuccess = (event) => {
+    event.target.result.forEach((el) => {
+      const item = document.createElement("li");
+
+      item.innerHTML = JSON.stringify(el);
+      itemList.appendChild(item);
+    });
+  };
+
+  getRequest.onerror = (event) => {
+    console.log("error: " + event.target.result);
+  };
+};
+
+// 수정 이벤트
+// 삭제 이벤트
+// 초기화 이벤트 (이벤트 연결)
 const init = () => {
   if (!window.indexedDB) {
     window.alert(
@@ -104,9 +133,11 @@ const init = () => {
 
   const createButton = document.querySelector("#createButton");
   const readButton = document.querySelector("#readButton");
+  const readAllButton = document.querySelector("#readAllButton");
 
   createButton.onclick = createEvent;
   readButton.onclick = readEvent;
+  readAllButton.onclick = readAllEvent;
 };
 
 init();
