@@ -171,6 +171,45 @@ const updateEvent = () => {
 };
 
 // 삭제 이벤트
+const deleteEvent = () => {
+  if (!db) {
+    console.log("DB does not exist");
+    return;
+  }
+
+  const itemList = document.querySelector(".itemList");
+  const id = Number(prompt("set key"));
+
+  const store = db
+    .transaction(objectStoreName, "readwrite")
+    .objectStore(objectStoreName);
+
+  const deleteRequest = store.delete(id);
+
+  deleteRequest.onsuccess = (_) => {
+    const getRequest = store.getAll();
+
+    getRequest.onsuccess = (event) => {
+      itemList.replaceChildren();
+
+      event.target.result.forEach((el) => {
+        const item = document.createElement("li");
+
+        item.innerHTML = JSON.stringify(el);
+        itemList.appendChild(item);
+      });
+    };
+
+    getRequest.onerror = (event) => {
+      console.log("error: " + event.target.errorCode);
+    };
+  };
+
+  deleteRequest.onerror = (event) => {
+    console.log("error: " + event.target.errorCode);
+  };
+};
+
 // 초기화 이벤트 (이벤트 연결)
 const init = () => {
   if (!window.indexedDB) {
@@ -185,11 +224,13 @@ const init = () => {
   const readButton = document.querySelector("#readButton");
   const readAllButton = document.querySelector("#readAllButton");
   const updateButton = document.querySelector("#updateButton");
+  const deletebutton = document.querySelector("#deleteButton");
 
   createButton.onclick = createEvent;
   readButton.onclick = readEvent;
   readAllButton.onclick = readAllEvent;
   updateButton.onclick = updateEvent;
+  deletebutton.onclick = deleteEvent;
 };
 
 init();
