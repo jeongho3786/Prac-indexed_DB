@@ -57,7 +57,7 @@ const createEvent = () => {
   };
 
   addRequest.onerror = (event) => {
-    console.log("error: " + event.target.result);
+    console.log("error: " + event.target.errorCode);
   };
 };
 
@@ -79,6 +79,8 @@ const readEvent = () => {
   const getRequest = store.get(id);
 
   getRequest.onsuccess = (event) => {
+    itemList.replaceChildren();
+
     const item = document.createElement("li");
 
     item.innerHTML = JSON.stringify(event.target.result);
@@ -86,7 +88,7 @@ const readEvent = () => {
   };
 
   getRequest.onerror = (event) => {
-    console.log("error: " + event.target.result);
+    console.log("error: " + event.target.errorCode);
   };
 };
 
@@ -106,6 +108,8 @@ const readAllEvent = () => {
   const getRequest = store.getAll();
 
   getRequest.onsuccess = (event) => {
+    itemList.replaceChildren();
+
     event.target.result.forEach((el) => {
       const item = document.createElement("li");
 
@@ -115,11 +119,57 @@ const readAllEvent = () => {
   };
 
   getRequest.onerror = (event) => {
-    console.log("error: " + event.target.result);
+    console.log("error: " + event.target.errorCode);
   };
 };
 
 // 수정 이벤트
+const updateEvent = () => {
+  if (!db) {
+    console.log("DB does not exist");
+    return;
+  }
+
+  const itemList = document.querySelector(".itemList");
+  const id = Number(prompt("set key"));
+
+  const store = db
+    .transaction(objectStoreName, "readwrite")
+    .objectStore(objectStoreName);
+
+  const updateReqeusst = store.put(
+    {
+      name: prompt("what is your name?"),
+      phone: prompt("what is your phoneNum?"),
+      email: prompt("what is your email?"),
+    },
+    id
+  );
+
+  updateReqeusst.onsuccess = (_) => {
+    const getRequest = store.getAll();
+
+    getRequest.onsuccess = (event) => {
+      itemList.replaceChildren();
+
+      event.target.result.forEach((el) => {
+        const item = document.createElement("li");
+
+        item.innerHTML = JSON.stringify(el);
+        itemList.appendChild(item);
+      });
+    };
+
+    getRequest.onerror = (event) => {
+      console.log("error: " + event.target.errorCode);
+    };
+  };
+
+  updateReqeusst.onerror = (event) => {
+    console.log("error: " + event.target.errorCode);
+  };
+};
+
 // 삭제 이벤트
 // 초기화 이벤트 (이벤트 연결)
 const init = () => {
@@ -134,10 +184,12 @@ const init = () => {
   const createButton = document.querySelector("#createButton");
   const readButton = document.querySelector("#readButton");
   const readAllButton = document.querySelector("#readAllButton");
+  const updateButton = document.querySelector("#updateButton");
 
   createButton.onclick = createEvent;
   readButton.onclick = readEvent;
   readAllButton.onclick = readAllEvent;
+  updateButton.onclick = updateEvent;
 };
 
 init();
