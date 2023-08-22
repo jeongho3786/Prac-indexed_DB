@@ -1,0 +1,23 @@
+{
+  "name": "demo-indexed-db",
+  "version": "1.0.0",
+  "description": "practice-indexed-db",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeongho3786/demo-indexedDB.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jeongho3786/demo-indexedDB/issues"
+  },
+  "homepage": "https://github.com/jeongho3786/demo-indexedDB#readme",
+  "dependencies": {
+    "@types/node": "^20.4.5",
+    "typescript": "^5.1.6"
+  }
+}

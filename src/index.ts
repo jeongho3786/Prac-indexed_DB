@@ -1,24 +1,26 @@
 // 초기 indexedDB 설정
-const dbName = "testDB";
-const objectStoreName = "user";
-const dbRequest = indexedDB.open("dbName", 1);
-let db = null;
+const DB_NAME = "testDB";
+const OBJECT_STORE_NAME = "user";
 
-dbRequest.onsuccess = (event) => {
-  db = event.target.result;
+const DBRequest = indexedDB.open("dbName", 1);
+let db: IDBDatabase | null = null;
+
+DBRequest.onsuccess = (event) => {
+  db = (event.target as IDBRequest).result;
   console.log("success db conect");
 };
 
-dbRequest.onerror = (event) => {
-  console.log("error: " + event.target.errorCode);
+DBRequest.onerror = (event) => {
+  console.log("error: " + (event.target as IDBRequest).error?.message);
 };
 
-dbRequest.onupgradeneeded = (event) => {
+DBRequest.onupgradeneeded = (_) => {
   if (!db) {
-    db = event.target.result;
+    console.log("error: empty DB");
+    return;
   }
 
-  const objectStore = db.createObjectStore(objectStoreName, {
+  const objectStore = db.createObjectStore(OBJECT_STORE_NAME, {
     autoIncrement: true,
   });
   objectStore.createIndex("name", "name");
@@ -33,7 +35,10 @@ const createEvent = () => {
     return;
   }
 
-  const transaction = db.transaction(objectStoreName, "readwrite");
+  const transaction: IDBTransaction = db.transaction(
+    OBJECT_STORE_NAME,
+    "readwrite"
+  );
 
   transaction.oncomplete = (_) => {
     console.log("Transaction completed: database modification finished");
@@ -41,11 +46,12 @@ const createEvent = () => {
 
   transaction.onerror = (event) => {
     console.log(
-      "Transaction not opened due to error: " + event.target.errorCode
+      "Transaction not opened due to error: " +
+        (event.target as IDBTransaction).error?.message
     );
   };
 
-  const store = transaction.objectStore(objectStoreName);
+  const store: IDBObjectStore = transaction.objectStore(OBJECT_STORE_NAME);
   const addRequest = store.add({
     name: prompt("what is your name?"),
     phone: prompt("what is your phoneNum?"),
@@ -53,11 +59,11 @@ const createEvent = () => {
   });
 
   addRequest.onsuccess = (event) => {
-    console.log("success: " + event.target.result);
+    console.log("success: " + (event.target as IDBRequest).result);
   };
 
   addRequest.onerror = (event) => {
-    console.log("error: " + event.target.errorCode);
+    console.log("error: " + (event.target as IDBRequest).error?.message);
   };
 };
 
@@ -69,12 +75,15 @@ const readEvent = () => {
   }
 
   const itemList = document.querySelector(".itemList");
+
+  if (!(itemList instanceof HTMLUListElement)) return;
+
   const id = Number(prompt("set key"));
 
   // 트랜잭션 완료 및 에러 핸들러 생략
   const store = db
-    .transaction(objectStoreName, "readonly")
-    .objectStore(objectStoreName);
+    .transaction(OBJECT_STORE_NAME, "readonly")
+    .objectStore(OBJECT_STORE_NAME);
 
   const getRequest = store.get(id);
 
@@ -83,12 +92,12 @@ const readEvent = () => {
 
     const item = document.createElement("li");
 
-    item.innerHTML = JSON.stringify(event.target.result);
+    item.innerHTML = JSON.stringify((event.target as IDBRequest).result);
     itemList.appendChild(item);
   };
 
   getRequest.onerror = (event) => {
-    console.log("error: " + event.target.errorCode);
+    console.log("error: " + (event.target as IDBRequest).error?.message);
   };
 };
 
@@ -101,16 +110,18 @@ const readAllEvent = () => {
 
   const itemList = document.querySelector(".itemList");
 
+  if (!(itemList instanceof HTMLUListElement)) return;
+
   const store = db
-    .transaction(objectStoreName, "readonly")
-    .objectStore(objectStoreName);
+    .transaction(OBJECT_STORE_NAME, "readonly")
+    .objectStore(OBJECT_STORE_NAME);
 
   const getRequest = store.getAll();
 
   getRequest.onsuccess = (event) => {
     itemList.replaceChildren();
 
-    event.target.result.forEach((el) => {
+    (event.target as IDBRequest).result.forEach((el: any) => {
       const item = document.createElement("li");
 
       item.innerHTML = JSON.stringify(el);
@@ -119,7 +130,7 @@ const readAllEvent = () => {
   };
 
   getRequest.onerror = (event) => {
-    console.log("error: " + event.target.errorCode);
+    console.log("error: " + (event.target as IDBRequest).error?.message);
   };
 };
 
@@ -131,11 +142,14 @@ const updateEvent = () => {
   }
 
   const itemList = document.querySelector(".itemList");
+
+  if (!(itemList instanceof HTMLUListElement)) return;
+
   const id = Number(prompt("set key"));
 
   const store = db
-    .transaction(objectStoreName, "readwrite")
-    .objectStore(objectStoreName);
+    .transaction(OBJECT_STORE_NAME, "readwrite")
+    .objectStore(OBJECT_STORE_NAME);
 
   const updateReqeusst = store.put(
     {
@@ -152,7 +166,7 @@ const updateEvent = () => {
     getRequest.onsuccess = (event) => {
       itemList.replaceChildren();
 
-      event.target.result.forEach((el) => {
+      (event.target as IDBRequest).result.forEach((el: any) => {
         const item = document.createElement("li");
 
         item.innerHTML = JSON.stringify(el);
@@ -161,12 +175,12 @@ const updateEvent = () => {
     };
 
     getRequest.onerror = (event) => {
-      console.log("error: " + event.target.errorCode);
+      console.log("error: " + (event.target as IDBRequest).error?.message);
     };
   };
 
   updateReqeusst.onerror = (event) => {
-    console.log("error: " + event.target.errorCode);
+    console.log("error: " + (event.target as IDBRequest).error?.message);
   };
 };
 
@@ -178,11 +192,14 @@ const deleteEvent = () => {
   }
 
   const itemList = document.querySelector(".itemList");
+
+  if (!(itemList instanceof HTMLUListElement)) return;
+
   const id = Number(prompt("set key"));
 
   const store = db
-    .transaction(objectStoreName, "readwrite")
-    .objectStore(objectStoreName);
+    .transaction(OBJECT_STORE_NAME, "readwrite")
+    .objectStore(OBJECT_STORE_NAME);
 
   const deleteRequest = store.delete(id);
 
@@ -192,7 +209,7 @@ const deleteEvent = () => {
     getRequest.onsuccess = (event) => {
       itemList.replaceChildren();
 
-      event.target.result.forEach((el) => {
+      (event.target as IDBRequest).result.forEach((el: any) => {
         const item = document.createElement("li");
 
         item.innerHTML = JSON.stringify(el);
@@ -201,12 +218,12 @@ const deleteEvent = () => {
     };
 
     getRequest.onerror = (event) => {
-      console.log("error: " + event.target.errorCode);
+      console.log("error: " + (event.target as IDBRequest).error?.message);
     };
   };
 
   deleteRequest.onerror = (event) => {
-    console.log("error: " + event.target.errorCode);
+    console.log("error: " + (event.target as IDBRequest).error?.message);
   };
 };
 
@@ -225,6 +242,16 @@ const init = () => {
   const readAllButton = document.querySelector("#readAllButton");
   const updateButton = document.querySelector("#updateButton");
   const deletebutton = document.querySelector("#deleteButton");
+
+  if (
+    !(createButton instanceof HTMLButtonElement) ||
+    !(readButton instanceof HTMLButtonElement) ||
+    !(readAllButton instanceof HTMLButtonElement) ||
+    !(updateButton instanceof HTMLButtonElement) ||
+    !(deletebutton instanceof HTMLButtonElement)
+  ) {
+    return;
+  }
 
   createButton.onclick = createEvent;
   readButton.onclick = readEvent;
