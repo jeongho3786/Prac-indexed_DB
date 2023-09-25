@@ -3,7 +3,7 @@ interface GetObjectStoreParams {
   mode: IDBTransactionMode;
 }
 
-class IndexedDB {
+export class IndexedDB {
   db: IDBDatabase | null = null;
   dbName: string;
   dbVersion: number | null = null;
@@ -43,142 +43,185 @@ class IndexedDB {
   }
 
   open(dbVersion: number, controlObjectStore?: (db: IDBDatabase) => void) {
-    if (!window.indexedDB) {
-      window.alert(
-        "Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available."
-      );
-      return;
-    }
-
-    this.dbVersion = dbVersion;
-
-    const DBRequest = indexedDB.open(this.dbName, this.dbVersion);
-
-    DBRequest.onsuccess = (event) => {
-      this.db = (event.target as IDBRequest).result;
-      console.log(
-        `Successfully opened DB, name: ${this.dbName}, version: ${this.dbVersion}`
-      );
-    };
-
-    DBRequest.onerror = (event) => {
-      console.error("error: " + (event.target as IDBRequest).error?.message);
-    };
-
-    DBRequest.onupgradeneeded = (_) => {
-      if (!this.db) {
-        console.error("error: empty DB");
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        window.alert(
+          "Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available."
+        );
+        reject();
         return;
       }
 
-      if (!controlObjectStore) return;
+      this.dbVersion = dbVersion;
+      const DBRequest = indexedDB.open(this.dbName, this.dbVersion);
 
-      controlObjectStore(this.db);
-    };
-  }
+      DBRequest.onsuccess = (_) => {
+        this.db = DBRequest.result;
+        console.log(
+          `Successfully opened DB, name: ${this.dbName}, version: ${this.dbVersion}`
+        );
 
-  add(objectStoreName: string, addData: { [key: string]: any }) {
-    const store = this.getObjectStore({
-      mode: "readwrite",
-      objectStoreName,
+        resolve(this.db);
+      };
+
+      DBRequest.onerror = (event) => {
+        console.error("error: " + (event.target as IDBRequest).error?.message);
+        reject();
+      };
+
+      DBRequest.onupgradeneeded = (event) => {
+        this.db = (event.target as IDBRequest).result;
+
+        if (!this.db) {
+          console.error("error: empty DB");
+          return;
+        }
+
+        if (!controlObjectStore) return;
+
+        controlObjectStore(this.db);
+        resolve(this.db);
+      };
     });
-
-    if (!store) return;
-
-    const addRequest = store.add(addData);
-
-    addRequest.onsuccess = (event) => {
-      console.log("success: " + (event.target as IDBRequest).result);
-    };
-
-    addRequest.onerror = (event) => {
-      console.error("error: " + (event.target as IDBRequest).error?.message);
-    };
   }
 
-  get(objectStoreName: string, key: number) {
+  async add(objectStoreName: string, addData: { [key: string]: any }) {
+    return new Promise((resolve, reject) => {
+      const store = this.getObjectStore({
+        mode: "readwrite",
+        objectStoreName,
+      });
+
+      if (!store) {
+        reject("empty store!");
+        return;
+      }
+
+      const addRequest = store.add(addData);
+
+      addRequest.onsuccess = (event) => {
+        console.log("success: " + (event.target as IDBRequest).result);
+        resolve(store);
+      };
+
+      addRequest.onerror = (event) => {
+        reject("error: " + (event.target as IDBRequest).error?.message);
+      };
+    });
+  }
+
+  async get(objectStoreName: string, key: number) {
     let result: any = null;
 
-    const store = this.getObjectStore({
-      mode: "readonly",
-      objectStoreName,
+    return new Promise((resolve, reject) => {
+      const store = this.getObjectStore({
+        mode: "readwrite",
+        objectStoreName,
+      });
+
+      if (!store) {
+        reject("empty store!");
+        return;
+      }
+
+      const getRequest = store.get(key);
+
+      getRequest.onsuccess = (event) => {
+        result = (event.target as IDBRequest).result;
+
+        if (!result) {
+          reject("have't value");
+        }
+
+        resolve(result);
+      };
+
+      getRequest.onerror = (event) => {
+        reject("error: " + (event.target as IDBRequest).error?.message);
+      };
     });
-
-    if (!store) return;
-
-    const getRequest = store.get(key);
-
-    getRequest.onsuccess = (event) => {
-      result = (event.target as IDBRequest).result;
-    };
-
-    getRequest.onerror = (event) => {
-      console.error("error: " + (event.target as IDBRequest).error?.message);
-    };
-
-    return result;
   }
 
-  getAll(objectStoreName: string) {
+  async getAll(objectStoreName: string) {
     let result: any[] = [];
 
-    const store = this.getObjectStore({
-      mode: "readonly",
-      objectStoreName,
+    return new Promise((resolve, reject) => {
+      const store = this.getObjectStore({
+        mode: "readwrite",
+        objectStoreName,
+      });
+
+      if (!store) {
+        reject("empty store!");
+        return;
+      }
+
+      const getRequest = store.getAll();
+
+      getRequest.onsuccess = (event) => {
+        result = (event.target as IDBRequest<any[]>).result;
+        resolve(result);
+      };
+
+      getRequest.onerror = (event) => {
+        reject("error: " + (event.target as IDBRequest).error?.message);
+      };
     });
-
-    if (!store) return;
-
-    const getRequest = store.getAll();
-
-    getRequest.onsuccess = (event) => {
-      result = (event.target as IDBRequest<any[]>).result;
-    };
-
-    getRequest.onerror = (event) => {
-      console.error("error: " + (event.target as IDBRequest).error?.message);
-    };
-
-    return result;
   }
 
-  put(objectStoreName: string, putData: { [key: string]: any }, key: number) {
-    const store = this.getObjectStore({
-      mode: "readwrite",
-      objectStoreName,
+  async put(
+    objectStoreName: string,
+    putData: { [key: string]: any },
+    key: number
+  ) {
+    return new Promise((resolve, reject) => {
+      const store = this.getObjectStore({
+        mode: "readwrite",
+        objectStoreName,
+      });
+
+      if (!store) {
+        reject("empty store!");
+        return;
+      }
+
+      const updateReqeusst = store.put(putData, key);
+
+      updateReqeusst.onsuccess = (event) => {
+        console.log("success: " + (event.target as IDBRequest).result);
+        resolve(store);
+      };
+
+      updateReqeusst.onerror = (event) => {
+        reject("error: " + (event.target as IDBRequest).error?.message);
+      };
     });
-
-    if (!store) return;
-
-    const updateReqeusst = store.put(putData, key);
-
-    updateReqeusst.onsuccess = (event) => {
-      console.log("success: " + (event.target as IDBRequest).result);
-    };
-
-    updateReqeusst.onerror = (event) => {
-      console.log("error: " + (event.target as IDBRequest).error?.message);
-    };
   }
 
-  delete(objectStoreName: string, key: number) {
-    const store = this.getObjectStore({
-      mode: "readwrite",
-      objectStoreName,
+  async delete(objectStoreName: string, key: number) {
+    return new Promise((resolve, reject) => {
+      const store = this.getObjectStore({
+        mode: "readwrite",
+        objectStoreName,
+      });
+
+      if (!store) {
+        reject("empty store!");
+        return;
+      }
+
+      const deleteRequest = store.delete(key);
+
+      deleteRequest.onsuccess = (event) => {
+        console.log("success: " + (event.target as IDBRequest).result);
+        resolve(store);
+      };
+
+      deleteRequest.onerror = (event) => {
+        reject("error: " + (event.target as IDBRequest).error?.message);
+      };
     });
-
-    if (!store) return;
-
-    const deleteRequest = store.delete(key);
-
-    deleteRequest.onsuccess = (event) => {
-      console.log("success: " + (event.target as IDBRequest).result);
-    };
-
-    deleteRequest.onerror = (event) => {
-      console.log("error: " + (event.target as IDBRequest).error?.message);
-    };
   }
+
+  // cursor, index ... 등등 필요에 따라 추가
 }
-
-export default IndexedDB;

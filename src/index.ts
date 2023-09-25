@@ -1,242 +1,154 @@
+import { IndexedDB } from "./indexed_db";
+
 // 초기 indexedDB 설정
 const DB_NAME = "testDB";
+const DB_VERSION = 1;
 const OBJECT_STORE_NAME = "user";
 
-const DBRequest = indexedDB.open("dbName", 1);
-let db: IDBDatabase | null = null;
-
-DBRequest.onsuccess = (event) => {
-  db = (event.target as IDBRequest).result;
-  console.log("success db conect");
-};
-
-DBRequest.onerror = (event) => {
-  console.log("error: " + (event.target as IDBRequest).error?.message);
-};
-
-DBRequest.onupgradeneeded = (_) => {
-  if (!db) {
-    console.log("error: empty DB");
-    return;
-  }
-
+const createObjectStroeIndex = (db: IDBDatabase) => {
   const objectStore = db.createObjectStore(OBJECT_STORE_NAME, {
     autoIncrement: true,
   });
+
   objectStore.createIndex("name", "name");
   objectStore.createIndex("phone", "phone");
   objectStore.createIndex("email", "email");
 };
 
+const indexedDB = new IndexedDB(DB_NAME);
+
+indexedDB.open(DB_VERSION, createObjectStroeIndex);
+
 // 생성 이벤트
-const createEvent = () => {
-  if (!db) {
-    console.log("DB does not exist");
-    return;
-  }
-
-  const transaction: IDBTransaction = db.transaction(
-    OBJECT_STORE_NAME,
-    "readwrite"
-  );
-
-  transaction.oncomplete = (_) => {
-    console.log("Transaction completed: database modification finished");
-  };
-
-  transaction.onerror = (event) => {
-    console.log(
-      "Transaction not opened due to error: " +
-        (event.target as IDBTransaction).error?.message
-    );
-  };
-
-  const store: IDBObjectStore = transaction.objectStore(OBJECT_STORE_NAME);
-  const addRequest = store.add({
-    name: prompt("what is your name?"),
-    phone: prompt("what is your phoneNum?"),
-    email: prompt("what is your email?"),
-  });
-
-  addRequest.onsuccess = (event) => {
-    console.log("success: " + (event.target as IDBRequest).result);
-  };
-
-  addRequest.onerror = (event) => {
-    console.log("error: " + (event.target as IDBRequest).error?.message);
-  };
-};
-
-// 읽기 이벤트
-const readEvent = () => {
-  if (!db) {
-    console.log("DB does not exist");
-    return;
-  }
-
+const createEvent = async () => {
   const itemList = document.querySelector(".itemList");
 
   if (!(itemList instanceof HTMLUListElement)) return;
 
-  const id = Number(prompt("set key"));
-
-  // 트랜잭션 완료 및 에러 핸들러 생략
-  const store = db
-    .transaction(OBJECT_STORE_NAME, "readonly")
-    .objectStore(OBJECT_STORE_NAME);
-
-  const getRequest = store.get(id);
-
-  getRequest.onsuccess = (event) => {
-    itemList.replaceChildren();
-
-    const item = document.createElement("li");
-
-    item.innerHTML = JSON.stringify((event.target as IDBRequest).result);
-    itemList.appendChild(item);
+  const addValue = {
+    name: prompt("what is your name?") || "",
+    phone: prompt("what is your phoneNum?") || "",
+    email: prompt("what is your email?") || "",
   };
 
-  getRequest.onerror = (event) => {
-    console.log("error: " + (event.target as IDBRequest).error?.message);
-  };
-};
+  try {
+    await indexedDB.add(OBJECT_STORE_NAME, addValue);
 
-// 전체 읽기 이벤트
-const readAllEvent = () => {
-  if (!db) {
-    console.log("DB does not exist");
-    return;
-  }
+    const data = (await indexedDB.getAll(OBJECT_STORE_NAME)) as any[];
 
-  const itemList = document.querySelector(".itemList");
-
-  if (!(itemList instanceof HTMLUListElement)) return;
-
-  const store = db
-    .transaction(OBJECT_STORE_NAME, "readonly")
-    .objectStore(OBJECT_STORE_NAME);
-
-  const getRequest = store.getAll();
-
-  getRequest.onsuccess = (event) => {
     itemList.replaceChildren();
 
-    (event.target as IDBRequest).result.forEach((el: any) => {
+    data.forEach((el: any) => {
       const item = document.createElement("li");
 
       item.innerHTML = JSON.stringify(el);
       itemList.appendChild(item);
     });
-  };
+  } catch (err) {
+    console.error(err);
+  }
+};
 
-  getRequest.onerror = (event) => {
-    console.log("error: " + (event.target as IDBRequest).error?.message);
-  };
+// 읽기 이벤트
+const readEvent = async () => {
+  const itemList = document.querySelector(".itemList");
+  const id = Number(prompt("set key"));
+
+  if (!(itemList instanceof HTMLUListElement)) return;
+
+  try {
+    const data = (await indexedDB.get(OBJECT_STORE_NAME, id)) as any;
+
+    itemList.replaceChildren();
+
+    const item = document.createElement("li");
+
+    item.innerHTML = JSON.stringify(data);
+    itemList.appendChild(item);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// 전체 읽기 이벤트
+const readAllEvent = async () => {
+  const itemList = document.querySelector(".itemList");
+
+  if (!(itemList instanceof HTMLUListElement)) return;
+
+  try {
+    const data = (await indexedDB.getAll(OBJECT_STORE_NAME)) as any[];
+
+    itemList.replaceChildren();
+
+    data.forEach((el: any) => {
+      const item = document.createElement("li");
+
+      item.innerHTML = JSON.stringify(el);
+      itemList.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // 수정 이벤트
-const updateEvent = () => {
-  if (!db) {
-    console.log("DB does not exist");
-    return;
-  }
-
+const updateEvent = async () => {
   const itemList = document.querySelector(".itemList");
+  const id = Number(prompt("set key"));
+  const newValue = {
+    name: prompt("what is your name?") || "",
+    phone: prompt("what is your phoneNum?") || "",
+    email: prompt("what is your email?") || "",
+  };
 
   if (!(itemList instanceof HTMLUListElement)) return;
 
-  const id = Number(prompt("set key"));
+  try {
+    await indexedDB.put(OBJECT_STORE_NAME, newValue, id);
 
-  const store = db
-    .transaction(OBJECT_STORE_NAME, "readwrite")
-    .objectStore(OBJECT_STORE_NAME);
+    const data = (await indexedDB.getAll(OBJECT_STORE_NAME)) as any[];
 
-  const updateReqeusst = store.put(
-    {
-      name: prompt("what is your name?"),
-      phone: prompt("what is your phoneNum?"),
-      email: prompt("what is your email?"),
-    },
-    id
-  );
+    itemList.replaceChildren();
 
-  updateReqeusst.onsuccess = (_) => {
-    const getRequest = store.getAll();
+    data.forEach((el: any) => {
+      const item = document.createElement("li");
 
-    getRequest.onsuccess = (event) => {
-      itemList.replaceChildren();
-
-      (event.target as IDBRequest).result.forEach((el: any) => {
-        const item = document.createElement("li");
-
-        item.innerHTML = JSON.stringify(el);
-        itemList.appendChild(item);
-      });
-    };
-
-    getRequest.onerror = (event) => {
-      console.log("error: " + (event.target as IDBRequest).error?.message);
-    };
-  };
-
-  updateReqeusst.onerror = (event) => {
-    console.log("error: " + (event.target as IDBRequest).error?.message);
-  };
+      item.innerHTML = JSON.stringify(el);
+      itemList.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // 삭제 이벤트
-const deleteEvent = () => {
-  if (!db) {
-    console.log("DB does not exist");
-    return;
-  }
-
+const deleteEvent = async () => {
   const itemList = document.querySelector(".itemList");
+  const id = Number(prompt("set key"));
 
   if (!(itemList instanceof HTMLUListElement)) return;
 
-  const id = Number(prompt("set key"));
+  try {
+    await indexedDB.delete(OBJECT_STORE_NAME, id);
 
-  const store = db
-    .transaction(OBJECT_STORE_NAME, "readwrite")
-    .objectStore(OBJECT_STORE_NAME);
+    const data = (await indexedDB.getAll(OBJECT_STORE_NAME)) as any[];
 
-  const deleteRequest = store.delete(id);
+    itemList.replaceChildren();
 
-  deleteRequest.onsuccess = (_) => {
-    const getRequest = store.getAll();
+    data.forEach((el: any) => {
+      const item = document.createElement("li");
 
-    getRequest.onsuccess = (event) => {
-      itemList.replaceChildren();
-
-      (event.target as IDBRequest).result.forEach((el: any) => {
-        const item = document.createElement("li");
-
-        item.innerHTML = JSON.stringify(el);
-        itemList.appendChild(item);
-      });
-    };
-
-    getRequest.onerror = (event) => {
-      console.log("error: " + (event.target as IDBRequest).error?.message);
-    };
-  };
-
-  deleteRequest.onerror = (event) => {
-    console.log("error: " + (event.target as IDBRequest).error?.message);
-  };
+      item.innerHTML = JSON.stringify(el);
+      itemList.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // 초기화 이벤트 (이벤트 연결)
 const init = () => {
-  if (!window.indexedDB) {
-    window.alert(
-      "Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available."
-    );
-
-    return;
-  }
-
   const createButton = document.querySelector("#createButton");
   const readButton = document.querySelector("#readButton");
   const readAllButton = document.querySelector("#readAllButton");
